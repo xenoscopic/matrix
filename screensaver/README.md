@@ -113,6 +113,9 @@ Known differences:
   glyphs crisper at higher bloom intensity.
 - State texture sampling in the rain render path uses explicit cell reads
   instead of bilinear `texture2D` sampling semantics.
+- Glyph cores still appear slightly softer than the web reference, even with
+  bloom disabled and with the same `matrixcode_msdf.png` atlas bytes.
+  Root cause is still unresolved.
 
 ## Suggested Future Work
 

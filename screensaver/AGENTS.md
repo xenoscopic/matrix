@@ -100,6 +100,9 @@ Current intentional differences from strict WebGL parity:
 - Bloom blur footprint is tightened for crisper glyphs at useful bloom gain.
 - Rain-state sampling is explicit cell reads, not bilinear `texture2D`
   semantics.
+- Glyph cores still appear slightly softer than the web reference, even with
+  bloom disabled and with matching `matrixcode_msdf.png` atlas bytes.
+  Root cause is unresolved.
 
 ## Build And Install
 

@@ -262,6 +262,9 @@ fragment float4 fs_main(VertexOut in [[stage_in]],
   float screenPxDistance = screenPxRange * (signedDistance - 0.5);
   float alpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
   float glyphBrightness = base * alpha * activated;
+  // Match classic REGL behavior where the primary pass is effectively
+  // clamped before bloom extraction.
+  glyphBrightness = min(glyphBrightness, 1.0);
   float normalChannel = isCursor ? 0.0 : glyphBrightness;
   float cursorChannel = isCursor ? glyphBrightness : 0.0;
   return float4(normalChannel, cursorChannel, 0.0, 1.0);
@@ -272,7 +275,7 @@ fragment float4 fs_main(VertexOut in [[stage_in]],
 fragment float4 fs_highpass(VertexOut in [[stage_in]],
                               texture2d<float> tex [[texture(0)]],
                               sampler texSampler [[sampler(0)]]) {
-  float highPassThreshold = 0.1;
+  float highPassThreshold = 0.12;
   float2 sampleUV = float2(in.uv.x, 1.0 - in.uv.y);
   float4 color = tex.sample(texSampler, sampleUV);
   if (color.r < highPassThreshold) { color.r = 0.0; }
@@ -314,12 +317,17 @@ fragment float4 fs_composite(VertexOut in [[stage_in]],
                               sampler texSampler [[sampler(0)]]) {
   // Accumulate weighted bloom from the five-level pyramid.
   float2 uv = in.uv;
-  float3 bloom = bloom0.sample(texSampler, uv).rgb * 0.96549;
+  float3 bloom = bloom0.sample(texSampler, uv).rgb * 0.90;
   bloom += bloom1.sample(texSampler, uv).rgb * 0.92832;
   bloom += bloom2.sample(texSampler, uv).rgb * 0.88790;
   bloom += bloom3.sample(texSampler, uv).rgb * 0.84343;
   bloom += bloom4.sample(texSampler, uv).rgb * 0.79370;
-  float3 brightness = baseTex.sample(texSampler, uv).rgb + bloom * 0.60;
+  // Read the primary glyph pass without filtering, then add blurred bloom.
+  int2 baseCoord = int2(in.position.xy);
+  baseCoord.x = clamp(baseCoord.x, 0, int(baseTex.get_width()) - 1);
+  baseCoord.y = clamp(baseCoord.y, 0, int(baseTex.get_height()) - 1);
+  baseCoord.y = int(baseTex.get_height()) - 1 - baseCoord.y;
+  float3 brightness = baseTex.read(uint2(baseCoord)).rgb + bloom * 0.60;
 
   // Apply grain before palette mapping to match the source ordering.
   float2 fragCoord = in.position.xy;
